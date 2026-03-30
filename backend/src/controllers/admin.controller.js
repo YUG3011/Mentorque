@@ -96,13 +96,34 @@ const getAvailabilityOverlap = async (req, res, next) => {
     });
 
     const overlaps = findOverlaps(userAvail, mentorAvail);
+    const overlapsWithBookingStatus = await Promise.all(
+      overlaps.map(async (slot) => {
+        const conflicts = await findActiveBookingConflicts({
+          userId,
+          mentorId,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        });
+
+        return {
+          ...slot,
+          isBooked: conflicts.hasConflicts,
+        };
+      })
+    );
+
+    const availableCount = overlapsWithBookingStatus.filter((slot) => !slot.isBooked).length;
+    const bookedCount = overlapsWithBookingStatus.length - availableCount;
 
     res.json({
       success: true,
       user: { id: user.id, name: user.name },
       mentor: { id: mentor.id, name: mentor.name },
-      overlapsCount: overlaps.length,
-      overlaps,
+      overlapsCount: overlapsWithBookingStatus.length,
+      availableCount,
+      bookedCount,
+      overlaps: overlapsWithBookingStatus,
       userAvailability: userAvail,
       mentorAvailability: mentorAvail,
     });

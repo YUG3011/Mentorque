@@ -49,7 +49,13 @@ const Booking = () => {
       if (res.data.overlaps?.length === 0) {
         toast.error('No overlapping availability found between this user and mentor');
       } else {
-        toast.success(`Found ${res.data.overlaps.length} overlapping slot(s)!`);
+        const availableCount = res.data.availableCount ?? 0;
+        const bookedCount = res.data.bookedCount ?? 0;
+        if (availableCount === 0 && bookedCount > 0) {
+          toast.error('All overlapping slots are already booked. Choose another user/mentor or time.');
+        } else {
+          toast.success(`Found ${availableCount} available slot(s) and ${bookedCount} booked slot(s).`);
+        }
       }
     } catch {
       toast.error('Failed to check overlaps');
@@ -63,6 +69,12 @@ const Booking = () => {
       toast.error('Select a time slot and call type');
       return;
     }
+
+    if (selectedSlot.isBooked) {
+      toast.error('This slot is already booked. Please select another slot.');
+      return;
+    }
+
     setLoading((l) => ({ ...l, booking: true }));
     try {
       const res = await api.post('/admin/book', {
@@ -85,6 +97,8 @@ const Booking = () => {
   };
 
   const callTypeIcons = { 'Resume Revamp': '📄', 'Job Market Guidance': '🌐', 'Mock Interviews': '🎯' };
+  const availableSlots = overlaps.filter((slot) => !slot.isBooked);
+  const bookedSlots = overlaps.filter((slot) => slot.isBooked);
 
   if (loading.init) return <div className="loader-wrapper"><div className="spinner" /></div>;
 
@@ -199,15 +213,23 @@ const Booking = () => {
           ) : (
             <>
               <div style={{ marginBottom: 12 }}>
-                <span className="tag green">{overlaps.length} slot{overlaps.length !== 1 ? 's' : ''} available</span>
+                <span className="tag green" style={{ marginRight: 8 }}>
+                  {availableSlots.length} available
+                </span>
+                <span className="tag" style={{ borderColor: 'rgba(239, 68, 68, 0.35)', color: '#fca5a5' }}>
+                  {bookedSlots.length} booked
+                </span>
               </div>
               <div style={{ maxHeight: 300, overflowY: 'auto', paddingRight: 4 }}>
                 {overlaps.map((slot, i) => (
                   <div
                     key={i}
                     id={`slot-${i}`}
-                    className={`overlap-slot ${selectedSlot === slot ? 'selected' : ''}`}
-                    onClick={() => setSelectedSlot(selectedSlot === slot ? null : slot)}
+                    className={`overlap-slot ${slot.isBooked ? 'booked' : ''} ${selectedSlot === slot ? 'selected' : ''}`}
+                    onClick={() => {
+                      if (slot.isBooked) return;
+                      setSelectedSlot(selectedSlot === slot ? null : slot);
+                    }}
                   >
                     <div className="slot-dot" />
                     <div style={{ flex: 1 }}>
@@ -216,8 +238,13 @@ const Booking = () => {
                         <Clock size={11} style={{ display: 'inline', marginRight: 4 }} />
                         {slot.startTime} – {slot.endTime}
                       </p>
+                      {slot.isBooked && (
+                        <p style={{ fontSize: 12, color: '#fca5a5', marginTop: 4 }}>
+                          Already booked
+                        </p>
+                      )}
                     </div>
-                    {selectedSlot === slot && (
+                    {selectedSlot === slot && !slot.isBooked && (
                       <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
                     )}
                   </div>
