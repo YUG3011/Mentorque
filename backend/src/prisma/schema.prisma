@@ -1,0 +1,89 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  password     String
+  tags         String[]
+  description  String?
+  availability Availability[]
+  bookings     Booking[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model Mentor {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  password     String
+  tags         String[]
+  description  String?
+  availability Availability[]
+  bookings     Booking[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("mentors")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model Availability {
+  id        String   @id @default(cuid())
+  userId    String?
+  mentorId  String?
+  date      String
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mentor Mentor? @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@map("availabilities")
+}
+
+model Booking {
+  id                   String   @id @default(cuid())
+  userId               String
+  mentorId             String
+  date                 String
+  startTime            String
+  endTime              String
+  callType             String
+  status               String   @default("CONFIRMED")
+  cancellationReason   String?
+  cancelledByRole      String?
+  mentorRequestType    String?
+  mentorRequestReason  String?
+  mentorRequestStatus  String?
+  proposedDate         String?
+  proposedStartTime    String?
+  proposedEndTime      String?
+  createdAt            DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  mentor Mentor @relation(fields: [mentorId], references: [id])
+
+  @@map("bookings")
+}
