@@ -1,7 +1,7 @@
 const prisma = require('../config/db');
 const { scoreMentors } = require('../services/recommendation.service');
 const { findOverlaps } = require('../services/availability.service');
-const { validateBookingSlot, createBooking } = require('../services/booking.service');
+const { validateBookingSlot, findActiveBookingConflicts, createBooking } = require('../services/booking.service');
 const logger = require('../utils/logger');
 
 const getAllUsers = async (req, res, next) => {
@@ -140,6 +140,15 @@ const bookCall = async (req, res, next) => {
       });
     }
 
+    const conflicts = await findActiveBookingConflicts({ userId, mentorId, date, startTime, endTime });
+    if (conflicts.hasConflicts) {
+      return res.status(409).json({
+        success: false,
+        message: 'Selected slot is already booked for this user or mentor',
+        conflicts,
+      });
+    }
+
     const booking = await createBooking({ userId, mentorId, date, startTime, endTime, callType });
 
     logger.info(`Booking created by admin: ${userId} with ${mentorId} on ${date}`);
@@ -240,6 +249,23 @@ const decideBookingRequest = async (req, res, next) => {
         return res.status(400).json({
           success: false,
           message: 'Requested reschedule slot is not in mentor availability',
+        });
+      }
+
+      const conflicts = await findActiveBookingConflicts({
+        userId: booking.userId,
+        mentorId: booking.mentorId,
+        date: targetDate,
+        startTime: targetStart,
+        endTime: targetEnd,
+        excludeBookingId: booking.id,
+      });
+
+      if (conflicts.hasConflicts) {
+        return res.status(409).json({
+          success: false,
+          message: 'Requested reschedule slot is already booked for this user or mentor',
+          conflicts,
         });
       }
 
