@@ -1,7 +1,18 @@
 import axios from 'axios';
 
+const FALLBACK_API_URL = 'https://mentorque-backend-0dvh.onrender.com/api';
+
+function resolveApiBaseUrl() {
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  const base = envUrl && /^https?:\/\//i.test(envUrl) ? envUrl : FALLBACK_API_URL;
+  const normalizedBase = base.replace(/\/+$/, '');
+
+  // Support both forms: https://host and https://host/api
+  return normalizedBase.endsWith('/api') ? normalizedBase : `${normalizedBase}/api`;
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://mentorque-backend-0dvh.onrender.com/api',
+  baseURL: resolveApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
