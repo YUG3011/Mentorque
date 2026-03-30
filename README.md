@@ -44,8 +44,7 @@ docker-compose up --build
 ```
 
 Services:
-- API: http://localhost:5000/api
-- DB: localhost:5432
+- API: https://mentorque-backend-0dvh.onrender.com/api
 
 ### Manual
 
